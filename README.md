@@ -31,7 +31,6 @@ A Tkinter-based GUI **Python script** for locating and managing duplicate files.
 
 * Python **3.10** or newer installed on the system (run via the `python` interpreter; this is not a packaged/executable app).
 * No third‑party dependencies.
-* No third‑party dependencies.
 
 ---
 
