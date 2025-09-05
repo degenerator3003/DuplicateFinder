@@ -1,45 +1,48 @@
 # Duplicate Finder (Tkinter, Python 3.10+)
 
-A Tkinter-based GUI **Python script** for locating and managing duplicate files. The program scans one or more directories, identifies sets of files that are identical by cryptographic hash, and provides tools to review, move to a quarantine folder, or delete duplicates.
+A Tkinter-based GUI **Python script** for locating and managing duplicate files. It scans one or more directories, groups identical files by cryptographic hash, and provides tools to review, move to a quarantine folder, or delete duplicates.
 
 ---
 
 ## Overview
 
-* **Technology**: Python standard library only; GUI built with Tkinter.
-* **Platforms**: Windows, macOS, Linux.
-* **Method**: Full‑file BLAKE2b‑256 hashing on same‑size candidates.
+- **Technology**: Python standard library only; GUI built with Tkinter.
+- **Platforms**: Windows, macOS, Linux.
+- **Method**: Size → head+tail fingerprint (BLAKE2b-128) → full-file **BLAKE2b-256** on candidates, with up to 4 worker threads and 16 MB read chunks.
 
 ---
 
 ## Features
 
-* Select multiple source folders (including drive roots).
-* Optional recursion into subfolders; optional following of symlinks.
-* Include / exclude filename patterns (e.g., `*.jpg;*.png`) and minimum size filter.
-* Determinate progress with file and byte counters.
-* Results shown as a tree: one **original** file (oldest modification time) with **duplicate** children.
-* Flag column (checkboxes) in addition to standard row selection.
-* "Select Duplicates in Group" selects only duplicate rows in the focused group.
-* Quarantine move (cross‑device safe: copy‑then‑delete fallback) or permanent delete.
-* Export results as CSV.
-* Results automatically stay consistent with the current source list.
+- Select multiple source folders (including drive roots).
+- Optional recursion into subfolders; optional following of symlinks.
+- Include / exclude filename patterns (e.g., `*.jpg;*.png`) and minimum size filter.
+- **Excluded folders** list to omit subtrees under chosen sources.
+- Determinate progress with file and byte counters.
+- Results shown as a tree: one **original** file (oldest modification time) with **duplicate** children; **group numbers** shown.
+- **Per-group “Dup Size (group)”** column and **click-to-sort** by duplicate bytes per group.
+- **Total dup size** label (red), updating as you act on files.
+- **Flag** column (checkboxes) in addition to standard row selection; press **Space** to toggle flags.
+- **Select Duplicates in Group** and **Select Duplicates (All Groups)**. Originals aren’t selected by these actions.
+- **Promote to Primary** (swap which file is shown as the group’s original; UI-only).
+- **Quarantine** operations with collision-safe naming and cross-device fallback; **baseline** (green, size when chosen) and **added since selection** (blue) size meters.
+- Export results as **CSV**.
+- Results automatically stay consistent with the current source list.
 
 ---
 
 ## Requirements
 
-* Python **3.10** or newer installed on the system (run via the `python` interpreter; this is not a packaged/executable app).
-* No third‑party dependencies.
+- Python **3.10+** installed (this is a Python script, not a packaged executable).
+- No third-party dependencies.
 
 ---
 
 ## Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/degenerator303/DuplicateFinder.git
-cd DuplicateFinder
+git clone https://github.com/<your-user>/<your-repo>.git
+cd <your-repo>
 ```
 
 ---
@@ -54,58 +57,40 @@ python DuplicateFinderGUI.py
 
 ## Usage
 
-1. **Add Sources**: Use **Add Folder…** to add directories to scan. Multiple entries are allowed.
+1. **Add Sources**: Use **Add Folder…** to add directories to scan (multiple allowed).
 2. **Options**:
-
-   * **Include subfolders**: When enabled, scan recursively.
-   * **Follow symlinks**: When enabled, follow symbolic links.
-   * **Min size (bytes)**: Skip files smaller than this value.
-   * **Include patterns / Exclude patterns**: Semicolon‑separated glob patterns. If Include is set, only matching files are considered. Exclude removes matching files.
-   * **Quarantine folder**: Destination for the “Move to quarantine” action.
-3. **Start**: Click **Start** to begin scanning. The application first counts files, then hashes candidates.
+   - **Include subfolders**, **Follow symlinks**, **Min size (bytes)**.
+   - **Include / Exclude patterns**: semicolon-separated globs.
+   - **Excluded folders**: omit subtrees from scanning.
+   - **Quarantine folder**: destination for **Move to Quarantine**.
+3. **Start**: Click **Start**. The application counts files, fingerprints candidates, then hashes them fully.
 4. **Review Results**:
-
-   * The left column shows file paths. Parents are originals; children are duplicates.
-   * Use the **Flag** column (checkboxes) to mark rows. Press **Space** to toggle flags on the current selection.
-   * **Select Duplicates in Group** selects only the duplicates in the focused group (never the original).
+   - Parents are originals; children are duplicates.
+   - **Sort** by “Dup Size (group)” to surface the largest groups.
+   - Use the **Flag** column (Space toggles) or normal selection.
+   - **Select Duplicates in Group** or **Select Duplicates (All Groups)** to target only duplicates.
 5. **Actions**:
-
-   * **Open**: Open the selected/flagged files in the default application.
-   * **Reveal in Folder**: Open the containing folder (or reveal the file, where supported).
-   * **Copy Paths**: Copy absolute paths to the clipboard.
-   * **Move to Quarantine**: Move selected/flagged files into the configured quarantine folder. Name collisions receive numeric suffixes. Cross‑device moves are handled via copy‑then‑delete.
-   * **Delete Selected**: Permanently delete selected/flagged files. No recycle bin is used.
-   * **Export CSV**: Write a CSV file with (Original, Duplicate, Size, Hash) rows.
+   - **Open** / **Reveal in Folder** / **Copy Paths**.
+   - **Move to Quarantine**: safe across devices; name collisions get numeric suffixes. The **green** meter shows the baseline size at selection; the **blue** meter shows bytes added since selection.
+   - **Delete Selected/Flagged…**: permanently deletes (no system recycle bin).
+   - **Export CSV**: includes group context and per-group duplicate size.
 
 ---
 
 ## How It Works
 
-1. **Enumeration**: Walk selected roots; filter by size and patterns; avoid reprocessing the same inode (hard links).
-2. **Size bucketing**: Only files with the same size proceed to hashing.
-3. **Hashing**: Compute BLAKE2b‑256 over the entire file using 8 MB chunks.
-4. **Grouping**: Files with identical `(size, digest)` are duplicates. The original is chosen as the file with the oldest modification time.
+1. **Enumeration**: Walk selected roots; apply include/exclude filters; avoid reprocessing the same inode (hard links).
+2. **Size bucketing**: Only files with the same size proceed.
+3. **Fingerprint + Hash**: Head+tail **BLAKE2b-128** fingerprint; if still colliding, full **BLAKE2b-256** over entire file (16 MB read chunks; up to 4 workers).
+4. **Grouping**: Files with identical `(size, digest)` are duplicates; the original is the file with the oldest modification time.
 
 The scanner runs in a background thread. UI updates are posted via a queue; cancellation is handled by a thread event.
 
 ---
 
-## Output
+## Notes
 
-* **Tree view** of duplicate groups in the GUI.
-* **CSV export** with columns: `Original`, `Duplicate`, `Size`, `Hash`.
-
----
-
-## Notes and Limitations
-
-* Deleting files uses `os.remove()` and does not use the system recycle bin.
-* Hashing reads entire files; initial runs on large datasets can take time.
-* Network locations and removable drives may be slower and subject to permission errors.
-* Following symlinks can lead to repeated content being scanned from multiple entry points; disable if not desired.
-
----
-
-## License
-
-This project is released under the MIT License. See `LICENSE` for details.
+- Delete uses `os.remove()` (no system recycle bin).
+- Hashing reads full file content for candidates; large datasets can take time.
+- Network/removable storage may be slower and trigger permission errors.
+- Following symlinks can lead to repeated content via multiple entry points; disable if not desired.
