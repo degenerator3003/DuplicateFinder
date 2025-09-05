@@ -41,8 +41,8 @@ A Tkinter-based GUI **Python script** for locating and managing duplicate files.
 ## Installation
 
 ```bash
-git clone https://github.com/<your-user>/<your-repo>.git
-cd <your-repo>
+git clone https://github.com/degenerator3003/DuplicateFinder.git
+cd DuplicateFinder
 ```
 
 ---
