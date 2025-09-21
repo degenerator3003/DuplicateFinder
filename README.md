@@ -2,6 +2,8 @@
 
 A Tkinter-based GUI **Python script** for locating and managing duplicate files. It scans one or more directories, groups identical files by cryptographic hash, and provides tools to review, move to a quarantine folder, or delete duplicates.
 
+![Duplicate Finder](assets/screenshots/Scr875.png)
+
 ---
 
 ## Overview
@@ -9,6 +11,7 @@ A Tkinter-based GUI **Python script** for locating and managing duplicate files.
 - **Technology**: Python standard library only; GUI built with Tkinter.
 - **Platforms**: Windows, macOS, Linux.
 - **Method**: Size → head+tail fingerprint (BLAKE2b-128) → full-file **BLAKE2b-256** on candidates, with up to 4 worker threads and 16 MB read chunks.
+
 
 ---
 
